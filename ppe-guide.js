@@ -16,11 +16,11 @@ fetch("ppe-guides.json", {cache:"no-store"})
         </div>
         <p class="mobile-hint">화면을 확대하면 세부 내용을 크게 볼 수 있습니다.</p>
         <div class="guide-actions">
-          <a class="btn primary" href="index.html">자재 목록으로 돌아가기</a>
+          <button class="btn primary" type="button" onclick="returnToMaterials()">자재 화면으로 돌아가기</button>
         </div>`;
     } else {
       guideBody = `<div class="guide-placeholder"><strong>착용 가이드 자료 준비중</strong><br>해당 보호구의 가이드 자료가 추가되면 이 화면에서 바로 표시됩니다.</div>
-        <div class="guide-actions"><a class="btn primary" href="index.html">자재 목록으로 돌아가기</a></div>`;
+        <div class="guide-actions"><button class="btn primary" type="button" onclick="returnToMaterials()">자재 화면으로 돌아가기</button></div>`;
     }
 
     el.innerHTML = `
@@ -32,3 +32,14 @@ fetch("ppe-guides.json", {cache:"no-store"})
       ${guideBody}`;
   })
   .catch(()=>{ el.innerHTML = `<div class="guide-placeholder"><strong>가이드 정보를 불러오지 못했습니다.</strong><br>GitHub Pages 배포 상태를 확인하세요.</div>`; });
+
+
+function returnToMaterials(){
+  // 상세 화면에서 들어왔다면 그 상세 화면으로 되돌아간다.
+  if(history.length > 1){
+    history.back();
+  }else{
+    location.href = "index.html";
+  }
+}
+window.returnToMaterials = returnToMaterials;

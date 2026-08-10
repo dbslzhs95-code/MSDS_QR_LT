@@ -2,6 +2,7 @@
 let materials = [];
 let activeCategory = "전체";
 let keyword = "";
+let currentDetailId = null;
 
 const grid = document.querySelector("#materialGrid");
 const count = document.querySelector("#resultCount");
@@ -87,7 +88,7 @@ function render(){
   });
 }
 
-function showDetail(m){
+function showDetail(m, pushHistory=true){
   const ppeList = Array.isArray(m.ppe) ? m.ppe : [];
   const ppeHtml = ppeList.length
     ? `<div class="ppe-list">${ppeList.map(p=>{
@@ -122,19 +123,36 @@ function showDetail(m){
     ${ppeHtml}
     <div class="actions">
       ${pdfButton}
-      <button class="btn primary" onclick="document.querySelector('#detailDialog').close()">목록으로</button>
+      <button class="btn primary" onclick="closeDetailView()">목록으로</button>
     </div>
     <div class="notice">※ 보호구 지정은 현장 기준 및 최신 MSDS를 확인해 등록하세요.</div>
   `;
-  dialog.showModal();
+  currentDetailId = m.id;
+  if(!dialog.open) dialog.showModal();
+
+  if(pushHistory){
+    if(!history.state || history.state.view !== "detail" || history.state.id !== m.id){
+      history.pushState({view:"detail", id:m.id}, "", location.href);
+    }
+  }
 }
 
 searchInput.addEventListener("input", e=>{
   keyword = e.target.value;
   render();
 });
-closeDialog.addEventListener("click", ()=>dialog.close());
-dialog.addEventListener("click", e=>{ if(e.target===dialog) dialog.close(); });
+function closeDetailView(){
+  if(history.state && history.state.view === "detail"){
+    history.back();
+  }else{
+    currentDetailId = null;
+    if(dialog.open) dialog.close();
+  }
+}
+window.closeDetailView = closeDetailView;
+
+closeDialog.addEventListener("click", closeDetailView);
+dialog.addEventListener("click", e=>{ if(e.target===dialog) closeDetailView(); });
 
 start().catch(err=>{
   console.error(err);
@@ -220,6 +238,13 @@ function unlockSite(){
   document.body.classList.remove("secure-locked");
   secureGate.hidden = true;
   if(secureLogoutButton) secureLogoutButton.hidden = false;
+
+  // QR로 바로 들어온 첫 화면 자체를 "목록" 히스토리로 고정.
+  // 이후 상세/MSDS에서 휴대폰 뒤로가기를 누르면 앱이 종료되지 않고
+  // 한 단계씩 목록으로 돌아오게 한다.
+  if(!history.state || !history.state.view){
+    history.replaceState({view:"list"}, "", location.href);
+  }
 }
 function lockSite(){
   securePasswordMemory = "";
@@ -238,6 +263,7 @@ function lockSite(){
   if(secureLoginMessage) secureLoginMessage.textContent = "";
   grid.innerHTML = "";
   count.textContent = "0";
+  history.replaceState({view:"list"}, "", location.href);
 }
 
 async function secureLogin(password){
@@ -255,6 +281,10 @@ async function secureLogin(password){
   buildCategories();
   render();
   unlockSite();
+
+  // 보호구 화면에서 브라우저 뒤로가기로 돌아왔거나 페이지가 복원된 경우
+  // 이전 상세 화면을 다시 연다.
+  requestAnimationFrame(()=>restoreViewFromHistory());
 }
 
 
@@ -311,6 +341,12 @@ async function openSecureMsds(msdsId,materialName){
   }
   if(dialog && dialog.open) dialog.close();
 
+  // MSDS 뷰어도 별도 히스토리 단계로 취급한다.
+  // 휴대폰 뒤로가기: MSDS → 자재 상세 → 목록 순서가 된다.
+  if(!history.state || history.state.view !== "msds" || history.state.id !== msdsId){
+    history.pushState({view:"msds", id:msdsId, name:materialName}, "", location.href);
+  }
+
   const match = String(msdsId).match(/(\d+)$/);
   if(!match) return alert("MSDS 번호 형식을 확인하세요.");
   const no = String(parseInt(match[1],10)).padStart(2,"0");
@@ -350,13 +386,101 @@ async function openSecureMsds(msdsId,materialName){
 }
 window.openSecureMsds = openSecureMsds;
 
-if(secureViewerBack){
-  secureViewerBack.addEventListener("click",()=>{
+function hideSecureViewer(){
+  if(secureViewer){
     secureViewer.hidden = true;
     secureViewerPages.innerHTML = "";
-    clearSecureObjectUrls();
+  }
+  clearSecureObjectUrls();
+}
+
+function restoreViewFromHistory(){
+  if(!materials || !materials.length) return;
+  const state = history.state || {view:"list"};
+
+  if(state.view === "detail" && state.id){
+    hideSecureViewer();
+    const m = materials.find(x=>x.id===state.id);
+    if(m){
+      showDetail(m, false);
+      return;
+    }
+  }
+
+  if(state.view === "msds" && state.id && securePasswordMemory){
+    if(dialog && dialog.open) dialog.close();
+    if(secureViewer && secureViewer.hidden){
+      // bfcache가 아닌 새 복원 상황에서도 MSDS 화면 재구성
+      openSecureMsdsFromHistory(state.id, state.name || state.id);
+    }
+    return;
+  }
+
+  hideSecureViewer();
+  currentDetailId = null;
+  if(dialog && dialog.open) dialog.close();
+}
+
+async function openSecureMsdsFromHistory(msdsId,materialName){
+  if(!securePasswordMemory) return;
+  const match = String(msdsId).match(/(\d+)$/);
+  if(!match) return;
+  const no = String(parseInt(match[1],10)).padStart(2,"0");
+
+  secureViewer.hidden = false;
+  secureViewerTitle.textContent = materialName || msdsId;
+  secureViewerStatus.textContent = "암호화 자료 복호화 중...";
+  secureViewerPages.innerHTML = `<div class="secure-viewer-loading">MSDS 보안 자료를 불러오는 중입니다...</div>`;
+  clearSecureObjectUrls();
+
+  try{
+    const files = await decryptMspack(`secure/msds-${no}.mspack`,securePasswordMemory);
+    const pages = files
+      .filter(f=>/page-\d+\.(webp|png|jpe?g)$/i.test(f.path.split("/").pop()))
+      .sort((a,b)=>a.path.localeCompare(b.path,undefined,{numeric:true}));
+
+    secureViewerPages.innerHTML = "";
+    for(let i=0;i<pages.length;i++){
+      const f = pages[i];
+      const ext = f.path.split(".").pop().toLowerCase();
+      const type = ext==="webp" ? "image/webp" : ext==="png" ? "image/png" : "image/jpeg";
+      const url = URL.createObjectURL(new Blob([f.data],{type}));
+      secureObjectUrls.push(url);
+      const img = document.createElement("img");
+      img.className = "secure-page";
+      img.src = url;
+      img.alt = `${materialName||msdsId} MSDS ${i+1}페이지`;
+      img.loading = i < 2 ? "eager" : "lazy";
+      secureViewerPages.appendChild(img);
+    }
+    secureViewerStatus.textContent = `${pages.length}페이지 · 복호화 완료`;
+  }catch(err){
+    secureViewerStatus.textContent = "열기 실패";
+    secureViewerPages.innerHTML = `<div class="secure-viewer-loading"><strong>MSDS를 열지 못했습니다.</strong><br>${esc(err.message||"오류")}</div>`;
+  }
+}
+
+if(secureViewerBack){
+  secureViewerBack.addEventListener("click",()=>{
+    if(history.state && history.state.view === "msds"){
+      history.back();
+    }else{
+      hideSecureViewer();
+    }
   });
 }
+
+// Android/휴대폰 시스템 뒤로가기 대응
+window.addEventListener("popstate", ()=>{
+  restoreViewFromHistory();
+});
+
+// bfcache 복귀 대응 (보호구 가이드 → 휴대폰 뒤로가기)
+window.addEventListener("pageshow", ()=>{
+  if(securePasswordMemory || sessionStorage.getItem(SECURE_SESSION_KEY)){
+    requestAnimationFrame(()=>restoreViewFromHistory());
+  }
+});
 
 // PWA service worker
 if("serviceWorker" in navigator){
