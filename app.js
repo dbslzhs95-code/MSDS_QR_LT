@@ -165,7 +165,9 @@ const MSPK_MAGIC = new TextEncoder().encode("MSPK1");
 const mspkEnc = new TextEncoder();
 const mspkDec = new TextDecoder();
 let securePasswordMemory = "";
+let secureRole = "";
 const SECURE_SESSION_KEY = "msds_secure_session_password_v1";
+const SECURE_ROLE_KEY = "msds_secure_session_role_v1";
 let secureObjectUrls = [];
 
 const secureGate = document.querySelector("#secureGate");
@@ -234,6 +236,19 @@ function clearSecureObjectUrls(){
   for(const url of secureObjectUrls) URL.revokeObjectURL(url);
   secureObjectUrls = [];
 }
+function updateRoleUI(){
+  const badge = document.querySelector("#secureRoleBadge");
+  if(!badge) return;
+  badge.hidden = false;
+  if(secureRole === "staff"){
+    badge.textContent = "미화팀 직원";
+    badge.className = "role-badge staff";
+  }else{
+    badge.textContent = "게스트";
+    badge.className = "role-badge guest";
+  }
+}
+
 function unlockSite(){
   document.body.classList.remove("secure-locked");
   secureGate.hidden = true;
@@ -249,6 +264,8 @@ function unlockSite(){
 function lockSite(){
   securePasswordMemory = "";
   sessionStorage.removeItem(SECURE_SESSION_KEY);
+  sessionStorage.removeItem(SECURE_ROLE_KEY);
+  secureRole = "";
   materials = [];
   clearSecureObjectUrls();
   if(dialog && dialog.open) dialog.close();
@@ -266,14 +283,21 @@ function lockSite(){
   history.replaceState({view:"list"}, "", location.href);
 }
 
-async function secureLogin(password){
-  const files = await decryptMspack("secure/materials.mspack",password);
-  const materialFile = findPackedFile(files,"materials.json");
-  if(!materialFile) throw new Error("materials.json이 암호화 PACK 안에 없습니다.");
+
+async function secureLoginGuest(){
+  const guestAccessKey = "1111";
+  const files = await decryptMspack("secure/guest/materials.mspack", guestAccessKey);
+  const materialFile = findPackedFile(files, "materials.json");
+  if(!materialFile) throw new Error("게스트용 자재목록을 불러오지 못했습니다.");
+
   const loaded = JSON.parse(mspkDec.decode(materialFile.data));
-  if(!Array.isArray(loaded)) throw new Error("materials.json 형식이 올바르지 않습니다.");
-  securePasswordMemory = password;
-  sessionStorage.setItem(SECURE_SESSION_KEY, password);
+  if(!Array.isArray(loaded)) throw new Error("게스트용 자재목록 형식이 올바르지 않습니다.");
+
+  securePasswordMemory = guestAccessKey;
+  secureRole = "guest";
+  sessionStorage.setItem(SECURE_SESSION_KEY, guestAccessKey);
+  sessionStorage.setItem(SECURE_ROLE_KEY, "guest");
+
   materials = loaded;
   activeCategory = "전체";
   keyword = "";
@@ -281,24 +305,74 @@ async function secureLogin(password){
   buildCategories();
   render();
   unlockSite();
+  updateRoleUI();
+  requestAnimationFrame(()=>restoreViewFromHistory());
+}
 
-  // 보호구 화면에서 브라우저 뒤로가기로 돌아왔거나 페이지가 복원된 경우
-  // 이전 상세 화면을 다시 연다.
+async function secureLogin(password){
+  const files = await decryptMspack("secure/staff/materials.mspack", password);
+  const role = "staff";
+  const materialsName = "materials.json";
+
+  const materialFile = findPackedFile(files, materialsName);
+  if(!materialFile) throw new Error("materials.json이 암호화 PACK 안에 없습니다.");
+
+  const loaded = JSON.parse(mspkDec.decode(materialFile.data));
+  if(!Array.isArray(loaded)) throw new Error("materials.json 형식이 올바르지 않습니다.");
+
+  securePasswordMemory = password;
+  secureRole = role;
+  sessionStorage.setItem(SECURE_SESSION_KEY, password);
+  sessionStorage.setItem(SECURE_ROLE_KEY, role);
+
+  materials = loaded;
+  activeCategory = "전체";
+  keyword = "";
+  searchInput.value = "";
+  buildCategories();
+  render();
+  unlockSite();
+  updateRoleUI();
+
   requestAnimationFrame(()=>restoreViewFromHistory());
 }
 
 
 async function restoreSecureSession(){
   const saved = sessionStorage.getItem(SECURE_SESSION_KEY);
+  const savedRole = sessionStorage.getItem(SECURE_ROLE_KEY);
   if(!saved) return false;
   try{
-    await secureLogin(saved);
+    if(savedRole === "guest"){
+      await secureLoginGuest();
+    }else{
+      await secureLogin(saved);
+    }
     return true;
   }catch(err){
     sessionStorage.removeItem(SECURE_SESSION_KEY);
     securePasswordMemory = "";
     return false;
   }
+}
+
+
+const guestLoginButton = document.querySelector("#guestLoginButton");
+if(guestLoginButton){
+  guestLoginButton.addEventListener("click", async ()=>{
+    guestLoginButton.disabled = true;
+    secureLoginMessage.textContent = "게스트로 접속 중...";
+    try{
+      // 게스트 자료는 원래 공개 범위(목록 + MSDS 1페이지)만 들어 있는 별도 PACK이다.
+      // 내부 접근키는 보안 비밀이 아니며 직원용 PACK과 완전히 분리되어 있다.
+      await secureLoginGuest();
+      secureLoginMessage.textContent = "";
+    }catch(err){
+      secureLoginMessage.textContent = err.message || "게스트 접속에 실패했습니다.";
+    }finally{
+      guestLoginButton.disabled = false;
+    }
+  });
 }
 
 if(secureLoginForm){
@@ -341,15 +415,15 @@ async function openSecureMsds(msdsId,materialName){
   }
   if(dialog && dialog.open) dialog.close();
 
-  // MSDS 뷰어도 별도 히스토리 단계로 취급한다.
-  // 휴대폰 뒤로가기: MSDS → 자재 상세 → 목록 순서가 된다.
+  const match = String(msdsId).match(/(\d+)$/);
+  if(!match) return alert("MSDS 번호 형식을 확인하세요.");
+  const no = String(parseInt(match[1],10)).padStart(2,"0");
+
+  // 히스토리 단계 추가
   if(!history.state || history.state.view !== "msds" || history.state.id !== msdsId){
     history.pushState({view:"msds", id:msdsId, name:materialName}, "", location.href);
   }
 
-  const match = String(msdsId).match(/(\d+)$/);
-  if(!match) return alert("MSDS 번호 형식을 확인하세요.");
-  const no = String(parseInt(match[1],10)).padStart(2,"0");
   secureViewer.hidden = false;
   secureViewerTitle.textContent = materialName || msdsId;
   secureViewerStatus.textContent = "암호화 자료 복호화 중...";
@@ -357,15 +431,22 @@ async function openSecureMsds(msdsId,materialName){
   clearSecureObjectUrls();
 
   try{
-    const files = await decryptMspack(`secure/msds-${no}.mspack`,securePasswordMemory);
+    const packUrl = secureRole === "staff"
+      ? `secure/staff/msds-${no}.mspack`
+      : `secure/guest/msds-${no}-preview.mspack`;
+
+    const files = await decryptMspack(packUrl,securePasswordMemory);
     const pages = files
       .filter(f=>/page-\d+\.(webp|png|jpe?g)$/i.test(f.path.split("/").pop()))
       .sort((a,b)=>a.path.localeCompare(b.path,undefined,{numeric:true}));
+
     if(!pages.length) throw new Error("MSDS 페이지 이미지가 PACK 안에 없습니다.");
 
     secureViewerPages.innerHTML = "";
-    for(let i=0;i<pages.length;i++){
-      const f = pages[i];
+    const visiblePages = secureRole === "staff" ? pages : pages.slice(0,1);
+
+    for(let i=0;i<visiblePages.length;i++){
+      const f = visiblePages[i];
       const ext = f.path.split(".").pop().toLowerCase();
       const type = ext==="webp" ? "image/webp" : ext==="png" ? "image/png" : "image/jpeg";
       const url = URL.createObjectURL(new Blob([f.data],{type}));
@@ -374,11 +455,23 @@ async function openSecureMsds(msdsId,materialName){
       img.className = "secure-page";
       img.src = url;
       img.alt = `${materialName||msdsId} MSDS ${i+1}페이지`;
-      img.loading = i < 2 ? "eager" : "lazy";
+      img.loading = "eager";
       secureViewerPages.appendChild(img);
     }
-    secureViewerStatus.textContent = `${pages.length}페이지 · 복호화 완료`;
-    secureViewer.scrollTo({top:0,behavior:"instant"});
+
+    if(secureRole === "guest"){
+      const notice = document.createElement("div");
+      notice.className = "guest-msds-notice";
+      notice.innerHTML = `
+        <strong>게스트 열람은 MSDS 1페이지만 제공됩니다.</strong>
+        <p>전체 MSDS 열람은 미화팀 직원 전용입니다.<br>추가 내용이 필요한 경우 미화팀 직원에게 문의해 주세요.</p>`;
+      secureViewerPages.appendChild(notice);
+      secureViewerStatus.textContent = `게스트 · 1페이지 미리보기`;
+    }else{
+      secureViewerStatus.textContent = `${pages.length}페이지 · 직원 전체 열람`;
+    }
+
+    if(secureViewer.scrollTo) secureViewer.scrollTo({top:0,behavior:"auto"});
   }catch(err){
     secureViewerStatus.textContent = "열기 실패";
     secureViewerPages.innerHTML = `<div class="secure-viewer-loading"><strong>MSDS를 열지 못했습니다.</strong><br>${esc(err.message||"오류")}</div>`;
@@ -434,14 +527,18 @@ async function openSecureMsdsFromHistory(msdsId,materialName){
   clearSecureObjectUrls();
 
   try{
-    const files = await decryptMspack(`secure/msds-${no}.mspack`,securePasswordMemory);
+    const packUrl = secureRole === "staff"
+      ? `secure/staff/msds-${no}.mspack`
+      : `secure/guest/msds-${no}-preview.mspack`;
+    const files = await decryptMspack(packUrl,securePasswordMemory);
     const pages = files
       .filter(f=>/page-\d+\.(webp|png|jpe?g)$/i.test(f.path.split("/").pop()))
       .sort((a,b)=>a.path.localeCompare(b.path,undefined,{numeric:true}));
 
     secureViewerPages.innerHTML = "";
-    for(let i=0;i<pages.length;i++){
-      const f = pages[i];
+    const visiblePages = secureRole === "staff" ? pages : pages.slice(0,1);
+    for(let i=0;i<visiblePages.length;i++){
+      const f = visiblePages[i];
       const ext = f.path.split(".").pop().toLowerCase();
       const type = ext==="webp" ? "image/webp" : ext==="png" ? "image/png" : "image/jpeg";
       const url = URL.createObjectURL(new Blob([f.data],{type}));
@@ -453,7 +550,15 @@ async function openSecureMsdsFromHistory(msdsId,materialName){
       img.loading = i < 2 ? "eager" : "lazy";
       secureViewerPages.appendChild(img);
     }
-    secureViewerStatus.textContent = `${pages.length}페이지 · 복호화 완료`;
+    if(secureRole === "guest"){
+      const notice = document.createElement("div");
+      notice.className = "guest-msds-notice";
+      notice.innerHTML = `<strong>게스트 열람은 MSDS 1페이지만 제공됩니다.</strong><p>전체 MSDS 열람은 미화팀 직원 전용입니다.<br>추가 내용이 필요한 경우 미화팀 직원에게 문의해 주세요.</p>`;
+      secureViewerPages.appendChild(notice);
+      secureViewerStatus.textContent = "게스트 · 1페이지 미리보기";
+    }else{
+      secureViewerStatus.textContent = `${pages.length}페이지 · 직원 전체 열람`;
+    }
   }catch(err){
     secureViewerStatus.textContent = "열기 실패";
     secureViewerPages.innerHTML = `<div class="secure-viewer-loading"><strong>MSDS를 열지 못했습니다.</strong><br>${esc(err.message||"오류")}</div>`;

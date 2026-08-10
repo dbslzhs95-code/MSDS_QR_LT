@@ -220,3 +220,22 @@ body.secure-locked > dialog{visibility:hidden}
 a[download] {
   display:none !important;
 }
+
+.role-badge{
+  display:inline-flex;align-items:center;margin-left:8px;padding:4px 8px;border-radius:999px;
+  font-size:11px;font-weight:800;vertical-align:middle
+}
+.role-badge.staff{background:#dff5ea;color:#0b5a40}
+.role-badge.guest{background:#fff0cc;color:#7a4b00}
+.guest-msds-notice{
+  margin:16px auto 30px;max-width:760px;background:#fff7df;border:1px solid #efd79b;
+  border-radius:14px;padding:16px 18px;line-height:1.55;color:#5e470d
+}
+.guest-msds-notice strong{display:block;margin-bottom:6px}
+.guest-msds-notice p{margin:0}
+
+.guest-login-btn{
+  width:100%;margin-top:9px;border:1px solid #cfdad4;background:#f4f8f6;color:#184b3b;
+  padding:12px;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer
+}
+.guest-login-btn:disabled{opacity:.6;cursor:wait}

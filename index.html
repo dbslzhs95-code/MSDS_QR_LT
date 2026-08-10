@@ -19,14 +19,15 @@
     <div class="secure-login-card">
       <div class="secure-lock">🔐</div>
       <h2>미화 자재 · MSDS</h2>
-      <p>허가된 사용자만 열람할 수 있습니다.</p>
+      <p>미화팀 직원은 비밀번호로 로그인하고, 일반 열람은 게스트로 접속하세요.</p>
       <form id="secureLoginForm">
-        <label for="securePassword">접근 비밀번호</label>
+        <label for="securePassword">미화팀 직원 비밀번호</label>
         <input id="securePassword" type="password" inputmode="numeric" autocomplete="current-password" placeholder="비밀번호 입력" autofocus>
-        <button class="btn primary secure-login-btn" type="submit">확인</button>
+        <button class="btn primary secure-login-btn" type="submit">직원 로그인</button>
+        <button id="guestLoginButton" class="btn guest-login-btn" type="button">게스트로 접속</button>
       </form>
       <p id="secureLoginMessage" class="secure-login-message" aria-live="polite"></p>
-      <p class="secure-login-note">비밀번호 분실시 관리자에게 문의하세요</p>
+      <p class="secure-login-note">게스트는 비밀번호 없이 접속할 수 있습니다.</p>
     </div>
   </div>
 
@@ -44,7 +45,7 @@
   <header class="hero">
     <div class="hero-inner">
       <div class="hero-top">
-        <p class="eyebrow">미화팀</p>
+        <p class="eyebrow">롯데아울렛 고양터미널점 · 미화</p>
         <div class="hero-actions"><button id="installAppButton" class="install-app-btn" type="button" hidden>＋ 홈 화면에 추가</button><button id="secureLogoutButton" class="install-app-btn" type="button" hidden>로그아웃</button></div>
       </div>
       <h1>자재 · MSDS 안내</h1>
