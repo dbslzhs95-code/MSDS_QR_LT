@@ -147,6 +147,7 @@ const MSPK_MAGIC = new TextEncoder().encode("MSPK1");
 const mspkEnc = new TextEncoder();
 const mspkDec = new TextDecoder();
 let securePasswordMemory = "";
+const SECURE_SESSION_KEY = "msds_secure_session_password_v1";
 let secureObjectUrls = [];
 
 const secureGate = document.querySelector("#secureGate");
@@ -222,6 +223,7 @@ function unlockSite(){
 }
 function lockSite(){
   securePasswordMemory = "";
+  sessionStorage.removeItem(SECURE_SESSION_KEY);
   materials = [];
   clearSecureObjectUrls();
   if(dialog && dialog.open) dialog.close();
@@ -245,6 +247,7 @@ async function secureLogin(password){
   const loaded = JSON.parse(mspkDec.decode(materialFile.data));
   if(!Array.isArray(loaded)) throw new Error("materials.json 형식이 올바르지 않습니다.");
   securePasswordMemory = password;
+  sessionStorage.setItem(SECURE_SESSION_KEY, password);
   materials = loaded;
   activeCategory = "전체";
   keyword = "";
@@ -252,6 +255,20 @@ async function secureLogin(password){
   buildCategories();
   render();
   unlockSite();
+}
+
+
+async function restoreSecureSession(){
+  const saved = sessionStorage.getItem(SECURE_SESSION_KEY);
+  if(!saved) return false;
+  try{
+    await secureLogin(saved);
+    return true;
+  }catch(err){
+    sessionStorage.removeItem(SECURE_SESSION_KEY);
+    securePasswordMemory = "";
+    return false;
+  }
 }
 
 if(secureLoginForm){
@@ -274,6 +291,14 @@ if(secureLoginForm){
     }
   });
 }
+
+
+// 뒤로가기 / 목록 이동 / 보호구 페이지 복귀 시 같은 탭에서는 재로그인하지 않음.
+restoreSecureSession().then(restored=>{
+  if(!restored && securePasswordInput){
+    setTimeout(()=>securePasswordInput.focus(),50);
+  }
+});
 
 if(secureLogoutButton){
   secureLogoutButton.addEventListener("click",lockSite);

@@ -212,3 +212,11 @@ body.secure-locked > dialog{visibility:hidden}
   margin:35px auto;background:#fff;border-radius:15px;padding:24px;text-align:center;
   color:#66736d;max-width:500px
 }
+
+/* v2: 보호구 가이드의 원본 PDF/다운로드 UI 비표시 */
+.ppe-download,
+.pdf-download,
+.download-link,
+a[download] {
+  display:none !important;
+}
