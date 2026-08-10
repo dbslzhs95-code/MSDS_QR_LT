@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f5a44">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="미화 MSDS">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>미화 자재 · MSDS 안내</title>
+  <link rel="stylesheet" href="style.css?v=pwa1">
+</head>
+<body>
+
+  <div id="secureGate" class="secure-gate">
+    <div class="secure-login-card">
+      <div class="secure-lock">🔐</div>
+      <h2>미화 자재 · MSDS</h2>
+      <p>허가된 사용자만 열람할 수 있습니다.</p>
+      <form id="secureLoginForm">
+        <label for="securePassword">접근 비밀번호</label>
+        <input id="securePassword" type="password" inputmode="numeric" autocomplete="current-password" placeholder="비밀번호 입력" autofocus>
+        <button class="btn primary secure-login-btn" type="submit">확인</button>
+      </form>
+      <p id="secureLoginMessage" class="secure-login-message" aria-live="polite"></p>
+      <p class="secure-login-note">비밀번호 분실시 관리자에게 문의하세요</p>
+    </div>
+  </div>
+
+  <div id="secureMsdsViewer" class="secure-viewer" hidden>
+    <div class="secure-viewer-bar">
+      <button id="secureViewerBack" class="secure-viewer-back" type="button">← 목록으로</button>
+      <div>
+        <strong id="secureViewerTitle">MSDS</strong>
+        <span id="secureViewerStatus"></span>
+      </div>
+    </div>
+    <main id="secureViewerPages" class="secure-viewer-pages"></main>
+  </div>
+
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="hero-top">
+        <p class="eyebrow">미화팀</p>
+        <div class="hero-actions"><button id="installAppButton" class="install-app-btn" type="button" hidden>＋ 홈 화면에 추가</button><button id="secureLogoutButton" class="install-app-btn" type="button" hidden>로그아웃</button></div>
+      </div>
+      <h1>자재 · MSDS 안내</h1>
+      <p class="subtitle">보관 자재의 위치와 안전정보를 확인하세요.</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="toolbar" aria-label="검색 및 분류">
+      <label class="search">
+        <span>⌕</span>
+        <input id="searchInput" type="search" placeholder="자재명, 용도, 업체 검색" autocomplete="off">
+      </label>
+      <div id="categoryButtons" class="chips"></div>
+    </section>
+
+    <section class="summary">
+      <div><strong id="resultCount">0</strong><span>개 자재</span></div>
+      <p>카드를 누르면 상세 MSDS 정보를 볼 수 있습니다.</p>
+    </section>
+
+    <section id="materialGrid" class="grid" aria-live="polite"></section>
+  </main>
+
+  <dialog id="detailDialog">
+    <div class="dialog-shell">
+      <button id="closeDialog" class="close" aria-label="닫기">×</button>
+      <div id="detailContent"></div>
+    </div>
+  </dialog>
+
+  <template id="cardTemplate">
+    <article class="card" tabindex="0">
+      <div class="photo">
+        <span class="photo-icon">🧴</span>
+        <span class="photo-label">자재 사진</span>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="category"></span>
+          <span class="code"></span>
+        </div>
+        <h2 class="name"></h2>
+        <p class="purpose"></p>
+        <dl class="mini-info">
+          <div><dt>보관</dt><dd class="location"></dd></div>
+          <div><dt>업체</dt><dd class="company"></dd></div>
+        </dl>
+        <span class="more">상세정보 보기 →</span>
+      </div>
+    </article>
+  </template>
+
+  <script src="app.js?v=secure1"></script>
+</body>
+</html>

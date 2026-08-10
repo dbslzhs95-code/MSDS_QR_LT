@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MSDS Secure Pack Tool</title>
+<style>
+:root{
+  --bg:#f3f6f4;--card:#fff;--text:#17211d;--muted:#66736d;
+  --brand:#0f5a44;--line:#dce5e0;--warn:#fff4d8;--danger:#a33;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text)}
+header{background:linear-gradient(135deg,#0b4a38,#177458);color:#fff;padding:24px 18px}
+header .wrap,main{max-width:920px;margin:auto}
+h1{margin:0 0 6px;font-size:26px}.sub{margin:0;opacity:.9;font-size:14px}
+main{padding:18px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tab{border:1px solid var(--line);background:#fff;padding:10px 14px;border-radius:999px;cursor:pointer;font-weight:700}
+.tab.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+.panel{display:none;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:16px}
+.panel.active{display:block}
+label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
+input[type=password],input[type=text],input[type=file]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button.primary{width:100%;margin-top:16px;border:0;background:var(--brand);color:#fff;padding:13px;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer}
+button.secondary{width:100%;margin-top:10px;border:1px solid var(--line);background:#fff;padding:12px;border-radius:12px;font-weight:700;cursor:pointer}
+.note{background:var(--warn);padding:12px;border-radius:12px;font-size:13px;line-height:1.55;margin:12px 0}
+.status{margin-top:14px;padding:12px;border-radius:12px;background:#eef3f0;white-space:pre-wrap;font-size:13px;min-height:44px}
+.small{font-size:12px;color:var(--muted);line-height:1.55}
+.danger{color:var(--danger);font-weight:800}
+code{background:#eef3f0;padding:2px 5px;border-radius:5px}
+@media(max-width:650px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>MSDS Secure Pack Tool</h1>
+    <p class="sub">로컬에서만 동작하는 암호화 PACK / UNPACK / 비밀번호 변경 도구</p>
+  </div>
+</header>
+<main>
+  <div class="note">
+    <b>초기 테스트 비밀번호: 1234</b><br>
+    실제 운영 전에는 반드시 더 긴 비밀번호로 변경하세요. 비밀번호는 이 HTML 파일이나 결과 파일에 평문으로 저장하지 않습니다.
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="pack">PACK</button>
+    <button class="tab" data-tab="unpack">UNPACK</button>
+    <button class="tab" data-tab="rekey">비밀번호 변경</button>
+  </div>
+
+  <section id="pack" class="panel active">
+    <h2>PACK - 파일 암호화</h2>
+    <p class="small">선택한 파일들을 하나의 <code>.mspack</code> 파일로 암호화합니다. 파일명/경로 목록도 암호화된 내부에 들어갑니다.</p>
+    <label>파일 선택</label>
+    <input id="packFiles" type="file" multiple>
+    <label>출력 파일명</label>
+    <input id="packName" type="text" value="secure-data.mspack">
+    <div class="row">
+      <div>
+        <label>비밀번호</label>
+        <input id="packPw1" type="password" value="1234">
+      </div>
+      <div>
+        <label>비밀번호 확인</label>
+        <input id="packPw2" type="password" value="1234">
+      </div>
+    </div>
+    <button id="packBtn" class="primary">암호화 PACK 만들기</button>
+    <div id="packStatus" class="status">대기 중</div>
+  </section>
+
+  <section id="unpack" class="panel">
+    <h2>UNPACK - 파일 복호화</h2>
+    <p class="small">암호화된 <code>.mspack</code>을 열어 원본 파일을 복원합니다. Chromium 계열에서는 폴더 저장을 지원하고, 미지원 브라우저에서는 파일별 다운로드를 사용합니다.</p>
+    <label>.mspack 선택</label>
+    <input id="unpackFile" type="file" accept=".mspack,application/octet-stream">
+    <label>비밀번호</label>
+    <input id="unpackPw" type="password" value="1234">
+    <button id="unpackBtn" class="primary">복호화 UNPACK</button>
+    <div id="unpackStatus" class="status">대기 중</div>
+  </section>
+
+  <section id="rekey" class="panel">
+    <h2>비밀번호 변경 - 재암호화</h2>
+    <p class="small">기존 암호를 풀어 평문 파일을 디스크에 저장하지 않고, 새 비밀번호로 다시 암호화합니다. 여러 개의 <code>.mspack</code>을 한 번에 변경할 수 있습니다.</p>
+    <label>.mspack 파일 선택 (복수 선택 가능)</label>
+    <input id="rekeyFiles" type="file" multiple accept=".mspack,application/octet-stream">
+    <div class="row">
+      <div>
+        <label>현재 비밀번호</label>
+        <input id="oldPw" type="password" value="1234">
+      </div>
+      <div>
+        <label>새 비밀번호</label>
+        <input id="newPw1" type="password" placeholder="새 비밀번호">
+      </div>
+    </div>
+    <label>새 비밀번호 확인</label>
+    <input id="newPw2" type="password" placeholder="새 비밀번호 확인">
+    <button id="rekeyBtn" class="primary">새 비밀번호로 재암호화</button>
+    <div id="rekeyStatus" class="status">대기 중</div>
+  </section>
+
+  <section class="panel active">
+    <h2>파일 형식 / 보안 설정</h2>
+    <div class="small">
+      <p><b>암호화:</b> AES-256-GCM</p>
+      <p><b>키 생성:</b> PBKDF2-HMAC-SHA-256, 600,000회</p>
+      <p><b>Salt:</b> 파일마다 무작위 16바이트</p>
+      <p><b>IV:</b> 파일마다 무작위 12바이트</p>
+      <p><b>형식:</b> MSPK v1. 헤더에는 버전·반복횟수·Salt·IV만 저장되며, 원본 파일명과 내용은 암호화됩니다.</p>
+      <p class="danger">주의: 비밀번호를 잊어버리면 복구할 수 없습니다. 원본은 별도 안전한 위치에 보관하세요.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const MAGIC = new TextEncoder().encode("MSPK1");
+const ITERATIONS = 600000;
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(x=>{
+      if(["pack","unpack","rekey"].includes(x.id)) x.classList.remove("active");
+    });
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.tab).classList.add("active");
+  });
+});
+
+function setStatus(id, msg){ document.getElementById(id).textContent = msg; }
+
+function u32(n){
+  const b = new Uint8Array(4);
+  new DataView(b.buffer).setUint32(0,n,false);
+  return b;
+}
+function readU32(bytes, off){ return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(off,false); }
+
+function concat(arrays){
+  const total = arrays.reduce((s,a)=>s+a.length,0);
+  const out = new Uint8Array(total);
+  let pos=0;
+  for(const a of arrays){ out.set(a,pos); pos += a.length; }
+  return out;
+}
+function bytesEqual(a,b){
+  if(a.length!==b.length) return false;
+  for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return false;
+  return true;
+}
+function safePath(name){
+  return name.replaceAll("\\","/").split("/").filter(p=>p && p!=="." && p!=="..").join("/");
+}
+async function deriveKey(password, salt, iterations=ITERATIONS){
+  const base = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    {name:"PBKDF2", salt, iterations, hash:"SHA-256"},
+    base,
+    {name:"AES-GCM", length:256},
+    false,
+    ["encrypt","decrypt"]
+  );
+}
+async function encryptPayload(payload, password){
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(password,salt);
+  const cipher = new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},key,payload));
+  // header: MAGIC(5) + iterations(4) + salt(16) + iv(12) + ciphertext
+  return concat([MAGIC,u32(ITERATIONS),salt,iv,cipher]);
+}
+async function decryptPack(bytes,password){
+  if(bytes.length < 5+4+16+12+16) throw new Error("올바른 MSPK 파일이 아닙니다.");
+  if(!bytesEqual(bytes.slice(0,5),MAGIC)) throw new Error("MSPK v1 파일이 아닙니다.");
+  const iterations = readU32(bytes,5);
+  const salt = bytes.slice(9,25);
+  const iv = bytes.slice(25,37);
+  const cipher = bytes.slice(37);
+  const key = await deriveKey(password,salt,iterations);
+  try{
+    return new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM",iv},key,cipher));
+  }catch(e){
+    throw new Error("비밀번호가 틀렸거나 파일이 손상되었습니다.");
+  }
+}
+async function buildPayload(files){
+  const entries=[];
+  const chunks=[];
+  let offset=0;
+  for(const f of files){
+    const data = new Uint8Array(await f.arrayBuffer());
+    const path = safePath(f.webkitRelativePath || f.name);
+    entries.push({path,size:data.length,offset});
+    chunks.push(data);
+    offset += data.length;
+  }
+  const meta = enc.encode(JSON.stringify({version:1,created:new Date().toISOString(),files:entries}));
+  return concat([u32(meta.length),meta,...chunks]);
+}
+function parsePayload(payload){
+  if(payload.length<4) throw new Error("내부 데이터가 손상되었습니다.");
+  const metaLen = readU32(payload,0);
+  if(metaLen<=0 || metaLen>payload.length-4) throw new Error("내부 메타데이터가 손상되었습니다.");
+  const meta = JSON.parse(dec.decode(payload.slice(4,4+metaLen)));
+  const dataStart = 4+metaLen;
+  const files = meta.files.map(e=>{
+    const start = dataStart + e.offset;
+    const end = start + e.size;
+    if(start<dataStart || end>payload.length) throw new Error("내부 파일 범위가 손상되었습니다.");
+    return {path:safePath(e.path),data:payload.slice(start,end)};
+  });
+  return {meta,files};
+}
+function downloadBlob(blob,name){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function writeFilesToDirectory(files){
+  if(!window.showDirectoryPicker) return false;
+  const root = await window.showDirectoryPicker({mode:"readwrite"});
+  for(const f of files){
+    const parts=f.path.split("/");
+    let dir=root;
+    for(let i=0;i<parts.length-1;i++){
+      dir=await dir.getDirectoryHandle(parts[i],{create:true});
+    }
+    const h=await dir.getFileHandle(parts.at(-1),{create:true});
+    const w=await h.createWritable();
+    await w.write(f.data);
+    await w.close();
+  }
+  return true;
+}
+
+document.getElementById("packBtn").addEventListener("click", async ()=>{
+  const files=[...document.getElementById("packFiles").files];
+  const p1=document.getElementById("packPw1").value;
+  const p2=document.getElementById("packPw2").value;
+  let name=document.getElementById("packName").value.trim() || "secure-data.mspack";
+  if(!name.toLowerCase().endsWith(".mspack")) name += ".mspack";
+  if(!files.length) return setStatus("packStatus","파일을 선택하세요.");
+  if(!p1 || p1!==p2) return setStatus("packStatus","비밀번호가 비어 있거나 확인값이 다릅니다.");
+  try{
+    setStatus("packStatus",`PACK 중... (${files.length}개 파일)`);
+    const payload=await buildPayload(files);
+    const packed=await encryptPayload(payload,p1);
+    downloadBlob(new Blob([packed],{type:"application/octet-stream"}),name);
+    setStatus("packStatus",`완료: ${name}\n원본 ${files.length}개 파일이 암호화되었습니다.`);
+  }catch(e){ setStatus("packStatus","실패: "+e.message); }
+});
+
+document.getElementById("unpackBtn").addEventListener("click", async ()=>{
+  const f=document.getElementById("unpackFile").files[0];
+  const pw=document.getElementById("unpackPw").value;
+  if(!f) return setStatus("unpackStatus","파일을 선택하세요.");
+  try{
+    setStatus("unpackStatus","복호화 중...");
+    const plain=await decryptPack(new Uint8Array(await f.arrayBuffer()),pw);
+    const parsed=parsePayload(plain);
+    setStatus("unpackStatus",`복호화 성공: ${parsed.files.length}개 파일\n저장 위치를 선택하세요.`);
+    let saved=false;
+    try{ saved=await writeFilesToDirectory(parsed.files); }catch(e){
+      if(e.name==="AbortError") return setStatus("unpackStatus","저장 취소됨.");
+    }
+    if(!saved){
+      for(const item of parsed.files){
+        downloadBlob(new Blob([item.data]), item.path.split("/").at(-1));
+        await new Promise(r=>setTimeout(r,100));
+      }
+      setStatus("unpackStatus",`완료: ${parsed.files.length}개 파일을 개별 다운로드했습니다.`);
+    }else{
+      setStatus("unpackStatus",`완료: ${parsed.files.length}개 파일을 선택한 폴더에 복원했습니다.`);
+    }
+  }catch(e){ setStatus("unpackStatus","실패: "+e.message); }
+});
+
+document.getElementById("rekeyBtn").addEventListener("click", async ()=>{
+  const files=[...document.getElementById("rekeyFiles").files];
+  const oldPw=document.getElementById("oldPw").value;
+  const n1=document.getElementById("newPw1").value;
+  const n2=document.getElementById("newPw2").value;
+  if(!files.length) return setStatus("rekeyStatus","변경할 .mspack 파일을 선택하세요.");
+  if(!n1 || n1!==n2) return setStatus("rekeyStatus","새 비밀번호가 비어 있거나 확인값이 다릅니다.");
+  try{
+    let done=0;
+    for(const f of files){
+      setStatus("rekeyStatus",`비밀번호 변경 중... ${done+1}/${files.length}\n${f.name}`);
+      const plain=await decryptPack(new Uint8Array(await f.arrayBuffer()),oldPw);
+      // 무결성도 확인
+      parsePayload(plain);
+      const repacked=await encryptPayload(plain,n1);
+      const stem=f.name.toLowerCase().endsWith(".mspack") ? f.name.slice(0,-7) : f.name;
+      downloadBlob(new Blob([repacked],{type:"application/octet-stream"}),stem+"_rekey.mspack");
+      done++;
+      await new Promise(r=>setTimeout(r,120));
+    }
+    setStatus("rekeyStatus",`완료: ${done}개 파일을 새 비밀번호로 재암호화했습니다.\n새 파일 검증 후 기존 파일과 교체하세요.`);
+  }catch(e){
+    setStatus("rekeyStatus","실패: "+e.message+"\n처리 중단됨.");
+  }
+});
+</script>
+</body>
+</html>

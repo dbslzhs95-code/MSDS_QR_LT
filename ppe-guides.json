@@ -1,0 +1,44 @@
+[
+  {
+    "name": "보호장갑",
+    "icon": "🧤",
+    "guide_pdf": "ppe-guides/chemical-gloves-guide.pdf",
+    "description": "화학물질용 안전장갑의 선택, KCs 인증 확인, 성능수준 및 사용 전 점검 안내",
+    "guide_image": "ppe-guides/images/chemical-gloves-guide.webp"
+  },
+  {
+    "name": "보안경",
+    "icon": "🥽",
+    "guide_pdf": "ppe-guides/safety-glasses-guide.pdf",
+    "description": "보안경의 용도별 구분, KCs 인증 확인 및 구매·사용 지침 안내",
+    "guide_image": "ppe-guides/images/safety-glasses-guide.webp"
+  },
+  {
+    "name": "안면보호구",
+    "icon": "🛡️",
+    "guide_pdf": "",
+    "description": "",
+    "guide_image": ""
+  },
+  {
+    "name": "보호의",
+    "icon": "🦺",
+    "guide_pdf": "ppe-guides/chemical-protective-clothing-guide.pdf",
+    "description": "화학물질용 보호복의 종류·형식, KCs 인증 확인 및 사용 전 점검 안내",
+    "guide_image": "ppe-guides/images/chemical-protective-clothing-guide.webp"
+  },
+  {
+    "name": "보호신발",
+    "icon": "🥾",
+    "guide_pdf": "",
+    "description": "",
+    "guide_image": ""
+  },
+  {
+    "name": "호흡기 보호구",
+    "icon": "😷",
+    "guide_pdf": "",
+    "description": "",
+    "guide_image": ""
+  }
+]
