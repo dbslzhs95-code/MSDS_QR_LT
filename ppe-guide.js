@@ -16,13 +16,6 @@ fetch("ppe-guides.json", {cache:"no-store"})
         </div>
         <p class="mobile-hint">화면을 확대하면 세부 내용을 크게 볼 수 있습니다.</p>
         <div class="guide-actions">
-          ${guide.guide_pdf ? `<a class="btn secondary" href="${esc(guide.guide_pdf)}" target="_blank" rel="noopener">원본 PDF 열기</a>` : ""}
-          <a class="btn primary" href="index.html">자재 목록으로 돌아가기</a>
-        </div>`;
-    } else if(guide.guide_pdf){
-      guideBody = `<div class="guide-placeholder"><strong>모바일용 가이드 이미지를 준비중입니다.</strong><br>아래 버튼에서 원본 PDF를 확인할 수 있습니다.</div>
-        <div class="guide-actions">
-          <a class="btn secondary" href="${esc(guide.guide_pdf)}" target="_blank" rel="noopener">원본 PDF 열기</a>
           <a class="btn primary" href="index.html">자재 목록으로 돌아가기</a>
         </div>`;
     } else {
