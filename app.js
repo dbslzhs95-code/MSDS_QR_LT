@@ -30,6 +30,35 @@ function ppeIcon(name){
   }[name] || "🦺";
 }
 
+
+function safetyChemicalInfo(m){
+  const raw = m && (m.safety_chemical ?? m.safetyChemical ?? m.living_chemical ?? m.safety);
+  if(raw === true) return {enabled:true};
+  if(!raw || typeof raw !== "object") return {enabled:false};
+  return {
+    enabled: raw.enabled === true,
+    registration_no: raw.registration_no || raw.registrationNo || raw.number || "",
+    updated: raw.updated || raw.confirmed_at || raw.confirmedAt || "",
+    product_name: raw.product_name || raw.productName || "",
+    purpose: raw.purpose || "",
+    company: raw.company || ""
+  };
+}
+
+function activateDocumentTab(tabName){
+  const root = document.querySelector("#detailContent");
+  if(!root) return;
+  root.querySelectorAll(".doc-tab").forEach(btn=>{
+    const active = btn.dataset.docTab === tabName;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  root.querySelectorAll(".doc-panel").forEach(panel=>{
+    panel.hidden = panel.dataset.docPanel !== tabName;
+  });
+}
+window.activateDocumentTab = activateDocumentTab;
+
 async function start(){
   // Secure bootstrap handles materials loading after successful decryption.
 }
@@ -76,6 +105,11 @@ function render(){
     node.querySelector(".location").textContent = m.locations.join(" / ") || "-";
     node.querySelector(".company").textContent = m.company || "-";
     node.querySelector(".photo-icon").textContent = iconFor(m.category);
+    const safetyInfo = safetyChemicalInfo(m);
+    const safetyBadge = node.querySelector(".safety-chemical-badge");
+    if(safetyBadge){
+      safetyBadge.hidden = !safetyInfo.enabled;
+    }
     if(m.image){
       const p = node.querySelector(".photo");
       p.style.backgroundImage = `url("${m.image}")`;
@@ -100,13 +134,35 @@ function showDetail(m, pushHistory=true){
         </a>`;
       }).join("")}</div>`
     : "";
+
+  const safetyInfo = safetyChemicalInfo(m);
   const photoStyle = m.image ? `style="background-image:url('${esc(m.image)}')"` : "";
-  const pdfButton = m.pdf
-    ? `<button class="btn primary" type="button" onclick="openSecureMsds('${esc(m.id)}','${esc(m.name)}')">MSDS 바로보기</button>`
-    : `<span class="btn disabled">MSDS 준비중</span>`;
+
+  const msdsPanel = m.pdf
+    ? `<button class="btn primary doc-open-btn" type="button" onclick="openSecureMsds('${esc(m.id)}','${esc(m.name)}')">MSDS 바로보기</button>`
+    : `<span class="btn disabled doc-open-btn">MSDS 준비중</span>`;
+
+  const safetyTab = safetyInfo.enabled
+    ? `<button class="doc-tab" type="button" role="tab" aria-selected="false" data-doc-tab="safety" onclick="activateDocumentTab('safety')">생활화학제품 안전확인</button>`
+    : "";
+
+  const safetyPanel = safetyInfo.enabled ? `
+    <section class="doc-panel" data-doc-panel="safety" hidden>
+      <div class="safety-doc-summary">
+        <div><span>구분</span><strong>안전확인대상 생활화학제품</strong></div>
+        ${safetyInfo.registration_no ? `<div><span>신고·승인번호</span><strong>${esc(safetyInfo.registration_no)}</strong></div>` : ""}
+        ${safetyInfo.product_name ? `<div><span>등록 제품명</span><strong>${esc(safetyInfo.product_name)}</strong></div>` : ""}
+        ${safetyInfo.updated ? `<div><span>확인일</span><strong>${esc(safetyInfo.updated)}</strong></div>` : ""}
+      </div>
+      <button class="btn primary doc-open-btn" type="button" onclick="openSecureSafety('${esc(m.id)}','${esc(m.name)}')">생활화학제품 안전확인 자료보기</button>
+    </section>` : "";
+
   detailContent.innerHTML = `
     <div class="detail-head">
-      <span class="badge">${esc(m.category)} · ${esc(m.id)}</span>
+      <div class="detail-badge-row">
+        <span class="badge">${esc(m.category)} · ${esc(m.id)}</span>
+        ${safetyInfo.enabled ? `<span class="detail-safety-badge">안전확인대상 생활화학제품</span>` : ""}
+      </div>
       <h2>${esc(m.name)}</h2>
       <p class="detail-purpose">${esc(m.purpose||"")}</p>
     </div>
@@ -118,14 +174,26 @@ function showDetail(m, pushHistory=true){
       <div class="info-box"><span>MSDS 고유번호</span><strong>${esc(m.msds_id||"-")}</strong></div>
       <div class="info-box"><span>분류</span><strong>${esc(m.category)}</strong></div>
     </div>
+
+    <h3 class="section-title">안전자료 열람</h3>
+    <div class="doc-tabs" role="tablist" aria-label="안전자료 종류">
+      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="msds" onclick="activateDocumentTab('msds')">MSDS</button>
+      ${safetyTab}
+    </div>
+    <section class="doc-panel" data-doc-panel="msds">
+      <p class="section-help">물질안전보건자료(MSDS)를 열람합니다.</p>
+      ${msdsPanel}
+    </section>
+    ${safetyPanel}
+
     <h3 class="section-title">필요 보호구</h3>
     <p class="section-help">보호구를 누르면 착용 가이드로 이동합니다.</p>
     ${ppeHtml}
-    <div class="actions">
-      ${pdfButton}
+
+    <div class="actions single-action">
       <button class="btn primary" onclick="closeDetailView()">목록으로</button>
     </div>
-    <div class="notice">※ 보호구 지정은 현장 기준 및 최신 MSDS를 확인해 등록하세요.</div>
+    <div class="notice">※ 보호구 지정 및 안전확인 정보는 현장 기준과 최신 공식 자료를 확인해 등록하세요.</div>
   `;
   currentDetailId = m.id;
   if(!dialog.open) dialog.showModal();
@@ -408,39 +476,43 @@ if(secureLogoutButton){
   secureLogoutButton.addEventListener("click",lockSite);
 }
 
-async function openSecureMsds(msdsId,materialName){
+async function openSecureDocument(kind, materialId, materialName, pushHistory=true){
   if(!securePasswordMemory){
     lockSite();
     return;
   }
   if(dialog && dialog.open) dialog.close();
 
-  const match = String(msdsId).match(/(\d+)$/);
-  if(!match) return alert("MSDS 번호 형식을 확인하세요.");
+  const match = String(materialId).match(/(\d+)$/);
+  if(!match) return alert("자재 번호 형식을 확인하세요.");
   const no = String(parseInt(match[1],10)).padStart(2,"0");
 
-  // 히스토리 단계 추가
-  if(!history.state || history.state.view !== "msds" || history.state.id !== msdsId){
-    history.pushState({view:"msds", id:msdsId, name:materialName}, "", location.href);
+  const isSafety = kind === "safety";
+  const historyView = isSafety ? "safety" : "msds";
+  const titleSuffix = isSafety ? "생활화학제품 안전확인" : "MSDS";
+  const packStem = isSafety ? "safety" : "msds";
+
+  if(pushHistory && (!history.state || history.state.view !== historyView || history.state.id !== materialId)){
+    history.pushState({view:historyView, id:materialId, name:materialName}, "", location.href);
   }
 
   secureViewer.hidden = false;
-  secureViewerTitle.textContent = materialName || msdsId;
+  secureViewerTitle.textContent = `${materialName || materialId} · ${titleSuffix}`;
   secureViewerStatus.textContent = "암호화 자료 복호화 중...";
-  secureViewerPages.innerHTML = `<div class="secure-viewer-loading">MSDS 보안 자료를 불러오는 중입니다...</div>`;
+  secureViewerPages.innerHTML = `<div class="secure-viewer-loading">${esc(titleSuffix)} 보안 자료를 불러오는 중입니다...</div>`;
   clearSecureObjectUrls();
 
   try{
     const packUrl = secureRole === "staff"
-      ? `secure/staff/msds-${no}.mspack`
-      : `secure/guest/msds-${no}-preview.mspack`;
+      ? `secure/staff/${packStem}-${no}.mspack`
+      : `secure/guest/${packStem}-${no}-preview.mspack`;
 
     const files = await decryptMspack(packUrl,securePasswordMemory);
     const pages = files
       .filter(f=>/page-\d+\.(webp|png|jpe?g)$/i.test(f.path.split("/").pop()))
       .sort((a,b)=>a.path.localeCompare(b.path,undefined,{numeric:true}));
 
-    if(!pages.length) throw new Error("MSDS 페이지 이미지가 PACK 안에 없습니다.");
+    if(!pages.length) throw new Error(`${titleSuffix} 페이지 이미지가 PACK 안에 없습니다.`);
 
     secureViewerPages.innerHTML = "";
     const visiblePages = secureRole === "staff" ? pages : pages.slice(0,1);
@@ -454,8 +526,8 @@ async function openSecureMsds(msdsId,materialName){
       const img = document.createElement("img");
       img.className = "secure-page";
       img.src = url;
-      img.alt = `${materialName||msdsId} MSDS ${i+1}페이지`;
-      img.loading = "eager";
+      img.alt = `${materialName||materialId} ${titleSuffix} ${i+1}페이지`;
+      img.loading = i < 2 ? "eager" : "lazy";
       secureViewerPages.appendChild(img);
     }
 
@@ -463,8 +535,8 @@ async function openSecureMsds(msdsId,materialName){
       const notice = document.createElement("div");
       notice.className = "guest-msds-notice";
       notice.innerHTML = `
-        <strong>게스트 열람은 MSDS 1페이지만 제공됩니다.</strong>
-        <p>전체 MSDS 열람은 미화팀 직원 전용입니다.<br>추가 내용이 필요한 경우 미화팀 직원에게 문의해 주세요.</p>`;
+        <strong>게스트 열람은 ${esc(titleSuffix)} 1페이지만 제공됩니다.</strong>
+        <p>전체 자료 열람은 미화팀 직원 전용입니다.<br>추가 내용이 필요한 경우 미화팀 직원에게 문의해 주세요.</p>`;
       secureViewerPages.appendChild(notice);
       secureViewerStatus.textContent = `게스트 · 1페이지 미리보기`;
     }else{
@@ -474,10 +546,20 @@ async function openSecureMsds(msdsId,materialName){
     if(secureViewer.scrollTo) secureViewer.scrollTo({top:0,behavior:"auto"});
   }catch(err){
     secureViewerStatus.textContent = "열기 실패";
-    secureViewerPages.innerHTML = `<div class="secure-viewer-loading"><strong>MSDS를 열지 못했습니다.</strong><br>${esc(err.message||"오류")}</div>`;
+    secureViewerPages.innerHTML = `<div class="secure-viewer-loading"><strong>${esc(titleSuffix)} 자료를 열지 못했습니다.</strong><br>${esc(err.message||"오류")}</div>`;
   }
 }
+
+async function openSecureMsds(msdsId,materialName){
+  return openSecureDocument("msds", msdsId, materialName, true);
+}
+
+async function openSecureSafety(materialId,materialName){
+  return openSecureDocument("safety", materialId, materialName, true);
+}
+
 window.openSecureMsds = openSecureMsds;
+window.openSecureSafety = openSecureSafety;
 
 function hideSecureViewer(){
   if(secureViewer){
@@ -500,11 +582,10 @@ function restoreViewFromHistory(){
     }
   }
 
-  if(state.view === "msds" && state.id && securePasswordMemory){
+  if((state.view === "msds" || state.view === "safety") && state.id && securePasswordMemory){
     if(dialog && dialog.open) dialog.close();
     if(secureViewer && secureViewer.hidden){
-      // bfcache가 아닌 새 복원 상황에서도 MSDS 화면 재구성
-      openSecureMsdsFromHistory(state.id, state.name || state.id);
+      openSecureDocument(state.view === "safety" ? "safety" : "msds", state.id, state.name || state.id, false);
     }
     return;
   }
@@ -514,60 +595,10 @@ function restoreViewFromHistory(){
   if(dialog && dialog.open) dialog.close();
 }
 
-async function openSecureMsdsFromHistory(msdsId,materialName){
-  if(!securePasswordMemory) return;
-  const match = String(msdsId).match(/(\d+)$/);
-  if(!match) return;
-  const no = String(parseInt(match[1],10)).padStart(2,"0");
-
-  secureViewer.hidden = false;
-  secureViewerTitle.textContent = materialName || msdsId;
-  secureViewerStatus.textContent = "암호화 자료 복호화 중...";
-  secureViewerPages.innerHTML = `<div class="secure-viewer-loading">MSDS 보안 자료를 불러오는 중입니다...</div>`;
-  clearSecureObjectUrls();
-
-  try{
-    const packUrl = secureRole === "staff"
-      ? `secure/staff/msds-${no}.mspack`
-      : `secure/guest/msds-${no}-preview.mspack`;
-    const files = await decryptMspack(packUrl,securePasswordMemory);
-    const pages = files
-      .filter(f=>/page-\d+\.(webp|png|jpe?g)$/i.test(f.path.split("/").pop()))
-      .sort((a,b)=>a.path.localeCompare(b.path,undefined,{numeric:true}));
-
-    secureViewerPages.innerHTML = "";
-    const visiblePages = secureRole === "staff" ? pages : pages.slice(0,1);
-    for(let i=0;i<visiblePages.length;i++){
-      const f = visiblePages[i];
-      const ext = f.path.split(".").pop().toLowerCase();
-      const type = ext==="webp" ? "image/webp" : ext==="png" ? "image/png" : "image/jpeg";
-      const url = URL.createObjectURL(new Blob([f.data],{type}));
-      secureObjectUrls.push(url);
-      const img = document.createElement("img");
-      img.className = "secure-page";
-      img.src = url;
-      img.alt = `${materialName||msdsId} MSDS ${i+1}페이지`;
-      img.loading = i < 2 ? "eager" : "lazy";
-      secureViewerPages.appendChild(img);
-    }
-    if(secureRole === "guest"){
-      const notice = document.createElement("div");
-      notice.className = "guest-msds-notice";
-      notice.innerHTML = `<strong>게스트 열람은 MSDS 1페이지만 제공됩니다.</strong><p>전체 MSDS 열람은 미화팀 직원 전용입니다.<br>추가 내용이 필요한 경우 미화팀 직원에게 문의해 주세요.</p>`;
-      secureViewerPages.appendChild(notice);
-      secureViewerStatus.textContent = "게스트 · 1페이지 미리보기";
-    }else{
-      secureViewerStatus.textContent = `${pages.length}페이지 · 직원 전체 열람`;
-    }
-  }catch(err){
-    secureViewerStatus.textContent = "열기 실패";
-    secureViewerPages.innerHTML = `<div class="secure-viewer-loading"><strong>MSDS를 열지 못했습니다.</strong><br>${esc(err.message||"오류")}</div>`;
-  }
-}
 
 if(secureViewerBack){
   secureViewerBack.addEventListener("click",()=>{
-    if(history.state && history.state.view === "msds"){
+    if(history.state && (history.state.view === "msds" || history.state.view === "safety")){
       history.back();
     }else{
       hideSecureViewer();
