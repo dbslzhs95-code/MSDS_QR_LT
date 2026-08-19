@@ -143,7 +143,7 @@ function showDetail(m, pushHistory=true){
     : `<span class="btn disabled doc-open-btn">MSDS 준비중</span>`;
 
   const safetyTab = safetyInfo.enabled
-    ? `<button class="doc-tab" type="button" role="tab" aria-selected="false" data-doc-tab="safety" onclick="activateDocumentTab('safety')">생활화학제품 안전확인</button>`
+    ? `<button class="doc-tab" type="button" role="tab" aria-selected="false" data-doc-tab="safety" onclick="activateDocumentTab('safety')">안전확인대상 생활화학제품 조회</button>`
     : "";
 
   const safetyPanel = safetyInfo.enabled ? `
@@ -154,7 +154,7 @@ function showDetail(m, pushHistory=true){
         ${safetyInfo.product_name ? `<div><span>등록 제품명</span><strong>${esc(safetyInfo.product_name)}</strong></div>` : ""}
         ${safetyInfo.updated ? `<div><span>확인일</span><strong>${esc(safetyInfo.updated)}</strong></div>` : ""}
       </div>
-      <button class="btn primary doc-open-btn" type="button" onclick="openSecureSafety('${esc(m.id)}','${esc(m.name)}')">생활화학제품 안전확인 자료보기</button>
+      <button class="btn primary doc-open-btn" type="button" onclick="openSecureSafety('${esc(m.id)}','${esc(m.name)}')">초록누리자료 열람하기</button>
     </section>` : "";
 
   detailContent.innerHTML = `
@@ -175,9 +175,9 @@ function showDetail(m, pushHistory=true){
       <div class="info-box"><span>분류</span><strong>${esc(m.category)}</strong></div>
     </div>
 
-    <h3 class="section-title">안전확인대상 생활화학제품(미대상일 경우 열람되지않습니다)</h3>
+    <h3 class="section-title">MSDS/생활안전확인대상 자료 확인</h3>
     <div class="doc-tabs" role="tablist" aria-label="안전자료 종류">
-      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="msds" onclick="activateDocumentTab('msds')">초록누리 열람</button>
+      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="msds" onclick="activateDocumentTab('msds')">MSDS 열람</button>
       ${safetyTab}
     </div>
     <section class="doc-panel" data-doc-panel="msds">
