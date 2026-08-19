@@ -175,9 +175,9 @@ function showDetail(m, pushHistory=true){
       <div class="info-box"><span>분류</span><strong>${esc(m.category)}</strong></div>
     </div>
 
-    <h3 class="section-title">안전자료 열람</h3>
+    <h3 class="section-title">안전확인대상 생활화학제품 자료열람</h3>
     <div class="doc-tabs" role="tablist" aria-label="안전자료 종류">
-      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="msds" onclick="activateDocumentTab('msds')">MSDS</button>
+      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="초록누리자료열람" onclick="activateDocumentTab('msds')">MSDS</button>
       ${safetyTab}
     </div>
     <section class="doc-panel" data-doc-panel="msds">
