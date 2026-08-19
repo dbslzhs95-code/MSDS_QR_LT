@@ -177,7 +177,7 @@ function showDetail(m, pushHistory=true){
 
     <h3 class="section-title">MSDS/생활안전확인대상 자료 확인</h3>
     <div class="doc-tabs" role="tablist" aria-label="안전자료 종류">
-      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="msds" onclick="activateDocumentTab('msds')">초록누리 신고자료없음</button>
+      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="msds" onclick="activateDocumentTab('msds')">${safetyInfo.enabled ? "MSDS 자료" : "초록누리 신고자료없음"}</button>
       ${safetyTab}
     </div>
     <section class="doc-panel" data-doc-panel="msds">
