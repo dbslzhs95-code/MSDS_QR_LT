@@ -176,8 +176,8 @@ function showDetail(m, pushHistory=true){
     </div>
 
     <h3 class="section-title">안전확인대상 생활화학제품</h3>
-    <div class="doc-tabs" role="tablist" aria-label="안전자료 종류">
-      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="초록누리 확인" onclick="activateDocumentTab('msds')">MSDS</button>
+    <div class="doc-tabs" role="tablist" aria-label="안전확인대상 생활화학제품">
+      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="초록누리열람" onclick="activateDocumentTab('msds')">MSDS</button>
       ${safetyTab}
     </div>
     <section class="doc-panel" data-doc-panel="msds">
@@ -342,6 +342,7 @@ function lockSite(){
   sessionStorage.removeItem(SECURE_ROLE_KEY);
   secureRole = "";
   materials = [];
+  noticeCache = null;
   clearSecureObjectUrls();
   if(dialog && dialog.open) dialog.close();
   if(noticeDialog && noticeDialog.open) noticeDialog.close();
@@ -417,9 +418,32 @@ function renderNotices(items){
 
 async function loadNotices(force=false){
   if(noticeCache && !force) return noticeCache;
-  const res=await fetch(`notice.json?v=${Date.now()}`,{cache:"no-store"});
-  if(!res.ok) throw new Error(`notice.json을 불러오지 못했습니다. (${res.status})`);
-  const data=await res.json();
+
+  if(secureRole !== "staff"){
+    throw new Error("직원 전용 공지사항입니다.");
+  }
+  if(!securePasswordMemory){
+    throw new Error("직원 인증 정보가 없습니다. 다시 로그인해 주세요.");
+  }
+
+  // 평문 notice.json 대신 직원용 암호화 PACK을 복호화해서 읽습니다.
+  const files = await decryptMspack(
+    `secure/staff/notice.mspack?v=${Date.now()}`,
+    securePasswordMemory
+  );
+
+  const noticeFile = findPackedFile(files,"notice.json");
+  if(!noticeFile){
+    throw new Error("notice.mspack 안에 notice.json 파일이 없습니다.");
+  }
+
+  let data;
+  try{
+    data = JSON.parse(mspkDec.decode(noticeFile.data));
+  }catch(e){
+    throw new Error("notice.mspack 내부 notice.json 문법이 올바르지 않습니다.");
+  }
+
   noticeCache=normalizeNoticeItems(data);
   return noticeCache;
 }
