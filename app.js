@@ -175,9 +175,9 @@ function showDetail(m, pushHistory=true){
       <div class="info-box"><span>분류</span><strong>${esc(m.category)}</strong></div>
     </div>
 
-    <h3 class="section-title">안전자료 열람</h3>
+    <h3 class="section-title">안전확인대상 생활화학제품</h3>
     <div class="doc-tabs" role="tablist" aria-label="안전자료 종류">
-      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="msds" onclick="activateDocumentTab('msds')">MSDS</button>
+      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="초록누리 확인" onclick="activateDocumentTab('msds')">MSDS</button>
       ${safetyTab}
     </div>
     <section class="doc-panel" data-doc-panel="msds">
@@ -386,7 +386,7 @@ function renderNotices(items){
     noticeStatus.textContent = "등록된 공지사항이 없습니다.";
     return;
   }
-  noticeStatus.textContent = `${items.length}건의 공지사항`;
+  noticeStatus.textContent = `총 ${items.length}건 · 제목을 누르면 내용을 확인할 수 있습니다.`;
 
   for(const n of items){
     const item=document.createElement("article");
@@ -397,7 +397,10 @@ function renderNotices(items){
           ${n.important ? '<span class="notice-pin">중요</span>' : ''}
           <strong class="notice-title">${esc(n.title)}</strong>
         </span>
-        <span class="notice-date">${esc(n.date)}</span>
+        <span class="notice-row-side">
+          <span class="notice-date">${esc(n.date)}</span>
+          <span class="notice-chevron" aria-hidden="true">⌄</span>
+        </span>
       </button>
       <div class="notice-body" hidden>${esc(n.content).replace(/\n/g,"<br>")}</div>`;
     const row=item.querySelector(".notice-row");

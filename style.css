@@ -281,3 +281,206 @@ a[download] {
   .doc-tab{font-size:12px;padding:9px 10px}
   .safety-doc-summary>div{grid-template-columns:88px 1fr}
 }
+
+
+/* ===== 직원 공지사항 팝업 v2 ===== */
+#noticeDialog.notice-dialog{
+  width:min(720px,calc(100vw - 28px));
+  max-width:720px;
+  max-height:min(82vh,780px);
+  margin:auto;
+  padding:0;
+  border:0;
+  border-radius:24px;
+  background:#fff;
+  color:var(--text);
+  box-shadow:0 28px 90px rgba(8,30,21,.30);
+  overflow:hidden;
+}
+#noticeDialog.notice-dialog::backdrop{
+  background:rgba(12,25,20,.58);
+  backdrop-filter:blur(4px);
+}
+#noticeDialog .notice-shell{
+  max-height:min(82vh,780px);
+  overflow:auto;
+  padding:0;
+  background:#fff;
+}
+#noticeDialog .notice-head{
+  position:sticky;
+  top:0;
+  z-index:3;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  padding:22px 24px 17px;
+  border-bottom:1px solid #e5ece8;
+  background:rgba(255,255,255,.97);
+  backdrop-filter:blur(10px);
+}
+#noticeDialog .notice-head h2{
+  margin:4px 0 3px;
+  font-size:24px;
+  line-height:1.2;
+  letter-spacing:-.03em;
+}
+#noticeDialog .notice-head-desc{
+  margin:0;
+  color:#7a8881;
+  font-size:12px;
+  line-height:1.45;
+}
+#noticeDialog .notice-kicker{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  font-size:11px;
+  font-weight:850;
+  color:var(--brand);
+  letter-spacing:.02em;
+}
+#noticeDialog .notice-close{
+  appearance:none;
+  -webkit-appearance:none;
+  flex:0 0 auto;
+  width:40px;
+  height:40px;
+  border:0;
+  border-radius:50%;
+  background:#edf3f0;
+  color:#3f5048;
+  font:700 22px/1 system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+}
+#noticeDialog .notice-close:hover{background:#e2ece7}
+#noticeDialog .notice-status{
+  margin:0;
+  padding:14px 24px 10px;
+  color:#7b8982;
+  font-size:12px;
+  background:#fff;
+}
+#noticeDialog .notice-list{
+  display:grid;
+  gap:10px;
+  padding:0 24px 24px;
+}
+#noticeDialog .notice-item{
+  border:1px solid #dfe8e3;
+  border-radius:16px;
+  overflow:hidden;
+  background:#fff;
+  box-shadow:0 2px 8px rgba(18,46,34,.035);
+}
+#noticeDialog .notice-item.important{
+  border-color:#e6cb72;
+  background:#fffdf7;
+}
+#noticeDialog button.notice-row{
+  appearance:none;
+  -webkit-appearance:none;
+  width:100%;
+  margin:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#1a2621;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  padding:15px 16px;
+  text-align:left;
+  font:inherit;
+  cursor:pointer;
+}
+#noticeDialog button.notice-row:hover{background:#f8fbf9}
+#noticeDialog .notice-row-main{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+}
+#noticeDialog .notice-title{
+  min-width:0;
+  font-size:14px;
+  font-weight:800;
+  line-height:1.45;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#noticeDialog .notice-pin{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  height:22px;
+  padding:0 8px;
+  border-radius:999px;
+  background:#fff0b6;
+  color:#725500;
+  font-size:10px;
+  font-weight:900;
+}
+#noticeDialog .notice-row-side{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:0 0 auto;
+}
+#noticeDialog .notice-date{
+  font-size:11px;
+  color:#87958e;
+  white-space:nowrap;
+}
+#noticeDialog .notice-chevron{
+  color:#718078;
+  font-size:17px;
+  line-height:1;
+  transform:translateY(-1px);
+  transition:transform .18s ease;
+}
+#noticeDialog .notice-item.open .notice-chevron{transform:rotate(180deg)}
+#noticeDialog .notice-item.open .notice-title{white-space:normal}
+#noticeDialog .notice-body{
+  margin:0 16px 15px;
+  padding:14px 15px;
+  border-top:1px dashed #dce6e1;
+  border-radius:10px;
+  background:#f8fbf9;
+  color:#405048;
+  font-size:13px;
+  line-height:1.75;
+  word-break:keep-all;
+}
+#noticeDialog .notice-body[hidden]{display:none!important}
+#noticeDialog .notice-error{
+  margin:0 24px 24px;
+  padding:16px;
+  border-radius:14px;
+  background:#fff2f2;
+  color:#943b3b;
+  font-size:13px;
+}
+@media(max-width:650px){
+  #noticeDialog.notice-dialog{
+    width:calc(100vw - 16px);
+    max-height:86vh;
+    border-radius:19px;
+  }
+  #noticeDialog .notice-shell{max-height:86vh}
+  #noticeDialog .notice-head{padding:18px 16px 14px}
+  #noticeDialog .notice-head h2{font-size:21px}
+  #noticeDialog .notice-head-desc{font-size:11px}
+  #noticeDialog .notice-status{padding:12px 16px 9px}
+  #noticeDialog .notice-list{padding:0 16px 18px;gap:8px}
+  #noticeDialog button.notice-row{padding:13px 12px;gap:8px}
+  #noticeDialog .notice-title{font-size:13px}
+  #noticeDialog .notice-date{font-size:10px}
+  #noticeDialog .notice-row-side{gap:5px}
+  #noticeDialog .notice-body{margin:0 12px 12px;padding:12px;font-size:12px}
+}
