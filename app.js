@@ -175,9 +175,9 @@ function showDetail(m, pushHistory=true){
       <div class="info-box"><span>분류</span><strong>${esc(m.category)}</strong></div>
     </div>
 
-    <h3 class="section-title">안전확인대상 생활화학제품 자료열람</h3>
+    <h3 class="section-title">안전자료 열람</h3>
     <div class="doc-tabs" role="tablist" aria-label="안전자료 종류">
-      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="초록누리자료열람" onclick="activateDocumentTab('msds')">MSDS</button>
+      <button class="doc-tab active" type="button" role="tab" aria-selected="true" data-doc-tab="msds" onclick="activateDocumentTab('msds')">MSDS</button>
       ${safetyTab}
     </div>
     <section class="doc-panel" data-doc-panel="msds">
@@ -242,6 +242,11 @@ const secureGate = document.querySelector("#secureGate");
 const secureLoginForm = document.querySelector("#secureLoginForm");
 const securePasswordInput = document.querySelector("#securePassword");
 const secureLoginMessage = document.querySelector("#secureLoginMessage");
+const noticeDialog = document.querySelector("#noticeDialog");
+const noticeList = document.querySelector("#noticeList");
+const noticeStatus = document.querySelector("#noticeStatus");
+const noticeOpenButton = document.querySelector("#noticeOpenButton");
+const noticeCloseButton = document.querySelector("#noticeCloseButton");
 const secureLogoutButton = document.querySelector("#secureLogoutButton");
 const secureViewer = document.querySelector("#secureMsdsViewer");
 const secureViewerBack = document.querySelector("#secureViewerBack");
@@ -311,9 +316,11 @@ function updateRoleUI(){
   if(secureRole === "staff"){
     badge.textContent = "미화팀 직원";
     badge.className = "role-badge staff";
+    if(noticeOpenButton) noticeOpenButton.hidden = false;
   }else{
     badge.textContent = "게스트";
     badge.className = "role-badge guest";
+    if(noticeOpenButton) noticeOpenButton.hidden = true;
   }
 }
 
@@ -337,6 +344,8 @@ function lockSite(){
   materials = [];
   clearSecureObjectUrls();
   if(dialog && dialog.open) dialog.close();
+  if(noticeDialog && noticeDialog.open) noticeDialog.close();
+  if(noticeOpenButton) noticeOpenButton.hidden = true;
   if(secureViewer) secureViewer.hidden = true;
   document.body.classList.add("secure-locked");
   secureGate.hidden = false;
@@ -351,6 +360,92 @@ function lockSite(){
   history.replaceState({view:"list"}, "", location.href);
 }
 
+
+
+let noticeCache = null;
+
+function normalizeNoticeItems(data){
+  const items = Array.isArray(data) ? data : (data && Array.isArray(data.notices) ? data.notices : []);
+  return items
+    .filter(n=>n && n.enabled !== false)
+    .map((n,i)=>({
+      id: String(n.id ?? i+1),
+      title: String(n.title || "제목 없음"),
+      date: String(n.date || ""),
+      content: String(n.content || ""),
+      important: n.important === true,
+      order: Number.isFinite(Number(n.order)) ? Number(n.order) : 0
+    }))
+    .sort((a,b)=>Number(b.important)-Number(a.important) || b.order-a.order || b.date.localeCompare(a.date) || b.id.localeCompare(a.id,undefined,{numeric:true}));
+}
+
+function renderNotices(items){
+  if(!noticeList || !noticeStatus) return;
+  noticeList.innerHTML = "";
+  if(!items.length){
+    noticeStatus.textContent = "등록된 공지사항이 없습니다.";
+    return;
+  }
+  noticeStatus.textContent = `${items.length}건의 공지사항`;
+
+  for(const n of items){
+    const item=document.createElement("article");
+    item.className="notice-item" + (n.important ? " important" : "");
+    item.innerHTML=`
+      <button class="notice-row" type="button" aria-expanded="false">
+        <span class="notice-row-main">
+          ${n.important ? '<span class="notice-pin">중요</span>' : ''}
+          <strong class="notice-title">${esc(n.title)}</strong>
+        </span>
+        <span class="notice-date">${esc(n.date)}</span>
+      </button>
+      <div class="notice-body" hidden>${esc(n.content).replace(/\n/g,"<br>")}</div>`;
+    const row=item.querySelector(".notice-row");
+    const body=item.querySelector(".notice-body");
+    row.addEventListener("click",()=>{
+      const open=body.hidden;
+      body.hidden=!open;
+      row.setAttribute("aria-expanded",open ? "true" : "false");
+      item.classList.toggle("open",open);
+    });
+    noticeList.appendChild(item);
+  }
+}
+
+async function loadNotices(force=false){
+  if(noticeCache && !force) return noticeCache;
+  const res=await fetch(`notice.json?v=${Date.now()}`,{cache:"no-store"});
+  if(!res.ok) throw new Error(`notice.json을 불러오지 못했습니다. (${res.status})`);
+  const data=await res.json();
+  noticeCache=normalizeNoticeItems(data);
+  return noticeCache;
+}
+
+async function openStaffNotices(){
+  if(secureRole!=="staff" || !noticeDialog) return;
+  if(noticeStatus) noticeStatus.textContent="공지사항을 불러오는 중...";
+  if(noticeList) noticeList.innerHTML="";
+  if(!noticeDialog.open) noticeDialog.showModal();
+  try{
+    const items=await loadNotices(true);
+    renderNotices(items);
+  }catch(err){
+    if(noticeStatus) noticeStatus.textContent="공지사항을 불러오지 못했습니다.";
+    if(noticeList) noticeList.innerHTML=`<div class="notice-error">${esc(err.message||"오류")}</div>`;
+  }
+}
+
+if(noticeOpenButton){
+  noticeOpenButton.addEventListener("click",()=>openStaffNotices());
+}
+if(noticeCloseButton){
+  noticeCloseButton.addEventListener("click",()=>noticeDialog && noticeDialog.close());
+}
+if(noticeDialog){
+  noticeDialog.addEventListener("click",e=>{
+    if(e.target===noticeDialog) noticeDialog.close();
+  });
+}
 
 async function secureLoginGuest(){
   const guestAccessKey = "1111";
@@ -457,6 +552,9 @@ if(secureLoginForm){
       await secureLogin(password);
       secureLoginMessage.textContent = "";
       securePasswordInput.value = "";
+      // 직원이 비밀번호를 직접 입력해 로그인한 경우에만 공지 팝업 자동 표시.
+      // 같은 탭의 세션 복원/뒤로가기에서는 반복해서 띄우지 않는다.
+      setTimeout(()=>openStaffNotices(),80);
     }catch(err){
       secureLoginMessage.textContent = err.message || "로그인에 실패했습니다.";
       securePasswordInput.select();

@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>미화 자재 · MSDS 안내</title>
-  <link rel="stylesheet" href="style.css?v=safetychem1">
+  <link rel="stylesheet" href="style.css?v=notice1">
 </head>
 <body>
 
@@ -46,7 +46,7 @@
     <div class="hero-inner">
       <div class="hero-top">
         <p class="eyebrow">롯데아울렛 고양터미널점 · 미화</p>
-        <div class="hero-actions"><button id="installAppButton" class="install-app-btn" type="button" hidden>＋ 홈 화면에 추가</button><button id="secureLogoutButton" class="install-app-btn" type="button" hidden>로그아웃</button></div>
+        <div class="hero-actions"><button id="noticeOpenButton" class="install-app-btn" type="button" hidden>공지사항</button><button id="installAppButton" class="install-app-btn" type="button" hidden>＋ 홈 화면에 추가</button><button id="secureLogoutButton" class="install-app-btn" type="button" hidden>로그아웃</button></div>
       </div>
       <h1>자재 · MSDS 안내</h1>
       <p class="subtitle">보관 자재의 위치와 안전정보를 확인하세요.</p>
@@ -69,6 +69,20 @@
 
     <section id="materialGrid" class="grid" aria-live="polite"></section>
   </main>
+
+  <dialog id="noticeDialog" class="notice-dialog">
+    <div class="notice-shell">
+      <div class="notice-head">
+        <div>
+          <span class="notice-kicker">미화팀 직원 전용</span>
+          <h2>공지사항</h2>
+        </div>
+        <button id="noticeCloseButton" class="notice-close" type="button" aria-label="공지사항 닫기">×</button>
+      </div>
+      <p id="noticeStatus" class="notice-status">공지사항을 불러오는 중...</p>
+      <div id="noticeList" class="notice-list"></div>
+    </div>
+  </dialog>
 
   <dialog id="detailDialog">
     <div class="dialog-shell">
@@ -100,6 +114,6 @@
     </article>
   </template>
 
-  <script src="app.js?v=safetychem1"></script>
+  <script src="app.js?v=notice1"></script>
 </body>
 </html>
